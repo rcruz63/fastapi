@@ -1,29 +1,53 @@
-from fastapi import FastAPI
-from typing import Dict
+from fastapi import FastAPI, Query, HTTPException
+from typing import List, Optional
+from .models.radio_show import RadioShow
+from .services.radio_show_service import RadioShowService
 
-# Crear la instancia de FastAPI
 app = FastAPI(
-    title="Mi Servicio Web",
-    description="API de ejemplo usando FastAPI",
-    version="0.1.0"
+    title="API de Programas de Radio",
+    description="API para consultar episodios de programas de radio musicales de RTVE",
+    version="1.0.0"
 )
 
-@app.get("/")
-async def root() -> Dict[str, str]:
-    """
-    Endpoint raíz que retorna un mensaje de bienvenida
-    
-    Returns:
-        Dict[str, str]: Diccionario con mensaje de bienvenida
-    """
-    return {"mensaje": "¡Bienvenido a mi servicio web!"}
+# Inicializamos el servicio
+radio_service = RadioShowService()
 
-@app.get("/health")
-async def health_check() -> Dict[str, str]:
+@app.get("/", tags=["General"])
+async def root():
+    """Endpoint de bienvenida."""
+    return {
+        "mensaje": "¡Bienvenido a la API de Programas de Radio!",
+        "programas_disponibles": list(radio_service.shows_data.keys())
+    }
+
+@app.get("/programas/", response_model=List[RadioShow], tags=["Programas"])
+async def get_shows(programa: Optional[str] = None):
     """
-    Endpoint para verificar el estado del servicio
+    Obtiene todos los episodios, opcionalmente filtrados por programa.
     
-    Returns:
-        Dict[str, str]: Estado del servicio
+    Args:
+        programa: Nombre del programa a filtrar (opcional)
     """
-    return {"estado": "activo"} 
+    return radio_service.get_all_shows(programa)
+
+@app.get("/programas/año/{año}", response_model=List[RadioShow], tags=["Programas"])
+async def get_shows_by_year(año: int):
+    """
+    Obtiene todos los episodios de un año específico.
+    
+    Args:
+        año: Año a filtrar
+    """
+    return radio_service.get_shows_by_year(año)
+
+@app.get("/programas/buscar/", response_model=List[RadioShow], tags=["Búsqueda"])
+async def search_shows(
+    q: str = Query(..., min_length=3, description="Término de búsqueda")
+):
+    """
+    Busca episodios por título.
+    
+    Args:
+        q: Término de búsqueda (mínimo 3 caracteres)
+    """
+    return radio_service.search_by_title(q) 
