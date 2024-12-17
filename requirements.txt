@@ -1,0 +1,6 @@
+# Herramientas de desarrollo
+uv>=0.1.0
+fastapi>=0.68.0
+uvicorn>=0.15.0
+pydantic>=1.8.2
+pytest>=6.2.5 
