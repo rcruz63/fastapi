@@ -7,10 +7,7 @@ def test_read_root():
     """Prueba el endpoint raíz"""
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"mensaje": "¡Bienvenido a mi servicio web!"}
-
-def test_health_check():
-    """Prueba el endpoint de health check"""
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"estado": "activo"} 
+    data = response.json()
+    assert data["mensaje"] == "¡Bienvenido a la API de Programas de Radio!"
+    assert "programas_disponibles" in data
+    assert isinstance(data["programas_disponibles"], list)

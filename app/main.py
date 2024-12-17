@@ -30,15 +30,15 @@ async def get_shows(programa: Optional[str] = None):
     """
     return radio_service.get_all_shows(programa)
 
-@app.get("/programas/año/{año}", response_model=List[RadioShow], tags=["Programas"])
-async def get_shows_by_year(año: int):
+@app.get("/programas/year/{year}", response_model=List[RadioShow], tags=["Programas"])
+async def get_shows_by_year(year: int):
     """
     Obtiene todos los episodios de un año específico.
     
     Args:
-        año: Año a filtrar
+        year: Año a filtrar
     """
-    return radio_service.get_shows_by_year(año)
+    return radio_service.get_shows_by_year(year)
 
 @app.get("/programas/buscar/", response_model=List[RadioShow], tags=["Búsqueda"])
 async def search_shows(

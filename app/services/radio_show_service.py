@@ -30,7 +30,9 @@ class RadioShowService:
 
     def get_all_shows(self, programa: Optional[str] = None) -> List[RadioShow]:
         """Obtiene todos los episodios, opcionalmente filtrados por programa."""
-        if programa and programa in self.shows_data:
+        if programa:
+            if programa not in self.shows_data:
+                return []
             df = self.shows_data[programa]
         else:
             df = pd.concat(self.shows_data.values())
