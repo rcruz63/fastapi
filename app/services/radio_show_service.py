@@ -49,10 +49,28 @@ class RadioShowService:
             for _, row in df.iterrows()
         ]
 
-    def get_shows_by_year(self, año: int) -> List[RadioShow]:
-        """Obtiene todos los episodios de un año específico."""
-        all_shows = pd.concat(self.shows_data.values())
-        filtered_shows = all_shows[all_shows["Año"] == año]
+    def get_shows_by_date(self, año: int, mes: Optional[int] = None, programa: Optional[str] = None) -> List[RadioShow]:
+        """
+        Obtiene todos los episodios de una fecha específica.
+        
+        Args:
+            año: Año a filtrar
+            mes: Mes a filtrar (opcional)
+            programa: Nombre del programa a filtrar (opcional)
+        """
+        if programa and programa not in self.shows_data:
+            return []
+
+        # Seleccionar el DataFrame base
+        if programa:
+            df = self.shows_data[programa]
+        else:
+            df = pd.concat(self.shows_data.values())
+
+        # Aplicar filtros
+        filtered_df = df[df["Año"] == año]
+        if mes is not None:
+            filtered_df = filtered_df[filtered_df["Mes"] == mes]
         
         return [
             RadioShow(
@@ -63,7 +81,7 @@ class RadioShowService:
                 año=row["Año"],
                 mes=row["Mes"]
             )
-            for _, row in filtered_shows.iterrows()
+            for _, row in filtered_df.iterrows()
         ]
 
     def search_by_title(self, query: str) -> List[RadioShow]:

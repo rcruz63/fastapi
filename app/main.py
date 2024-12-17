@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from typing import List, Optional
@@ -40,15 +40,25 @@ async def get_shows(programa: Optional[str] = None):
     """
     return radio_service.get_all_shows(programa)
 
-@app.get("/programas/year/{year}", response_model=List[RadioShow], tags=["Programas"])
-async def get_shows_by_year(year: int):
+@app.get("/programas/fecha/{anio}", response_model=List[RadioShow], tags=["Programas"])
+async def get_shows_by_date(
+    anio: int = Path(..., title="Año", description="Año a filtrar"),
+    mes: Optional[int] = Query(None, description="Mes a filtrar"),
+    programa: Optional[str] = Query(None, description="Programa a filtrar")
+):
     """
-    Obtiene todos los episodios de un año específico.
+    Obtiene todos los episodios de una fecha específica.
     
     Args:
-        year: Año a filtrar
+        anio: Año a filtrar
+        mes: Mes a filtrar (opcional)
+        programa: Nombre del programa a filtrar (opcional)
+    
+    Returns:
+        List[RadioShow]: Lista de episodios que coinciden con los criterios (puede estar vacía)
     """
-    return radio_service.get_shows_by_year(year)
+    shows = radio_service.get_shows_by_date(año=anio, mes=mes, programa=programa)
+    return shows if shows is not None else []
 
 @app.get("/programas/buscar/", response_model=List[RadioShow], tags=["Búsqueda"])
 async def search_shows(

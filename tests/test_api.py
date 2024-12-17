@@ -34,14 +34,32 @@ def test_get_shows_by_program_endpoint(client):
     assert len(shows) > 0
     assert all(show["programa"] == programa for show in shows)
 
-def test_get_shows_by_year_endpoint(client):
-    """Test que verifica el endpoint de filtrado por año."""
-    year = 2010
-    response = client.get(f"/programas/year/{year}")
+def test_get_shows_by_date_endpoint(client):
+    """Test que verifica el endpoint de filtrado por fecha."""
+    año = 2010
+    mes = 10
+    response = client.get(f"/programas/fecha/{año}?mes={mes}")
     assert response.status_code == 200
     shows = response.json()
     assert isinstance(shows, list)
-    assert all(show["año"] == year for show in shows)
+    assert all(show["año"] == año and show["mes"] == mes for show in shows)
+
+def test_get_shows_by_date_and_program_endpoint(client):
+    """Test que verifica el endpoint de filtrado por fecha y programa."""
+    año = 2010
+    mes = 10
+    programa = "Música y Significado"
+    response = client.get(f"/programas/fecha/{año}?mes={mes}&programa={programa}")
+    assert response.status_code == 200
+    shows = response.json()
+    assert isinstance(shows, list)
+    if len(shows) > 0:  # Solo verificar si hay resultados
+        assert all(
+            show["año"] == año and 
+            show["mes"] == mes and 
+            show["programa"] == programa 
+            for show in shows
+        )
 
 def test_search_shows_endpoint(client):
     """Test que verifica el endpoint de búsqueda por título."""
@@ -58,10 +76,11 @@ def test_search_shows_min_length_validation(client):
     response = client.get(f"/programas/buscar/?q={query}")
     assert response.status_code == 422  # Validation error
 
-def test_invalid_year_returns_empty_list(client):
-    """Test que verifica que un año inválido devuelve lista vacía."""
-    year = 1900
-    response = client.get(f"/programas/year/{year}")
+def test_invalid_date_returns_empty_list(client):
+    """Test que verifica que una fecha inválida devuelve lista vacía."""
+    año = 1900
+    mes = 1
+    response = client.get(f"/programas/fecha/{año}?mes={mes}")
     assert response.status_code == 200
     shows = response.json()
     assert shows == [] 
