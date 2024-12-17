@@ -1,4 +1,6 @@
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import List, Optional
 from .models.radio_show import RadioShow
 from .services.radio_show_service import RadioShowService
@@ -8,6 +10,9 @@ app = FastAPI(
     description="API para consultar episodios de programas de radio musicales de RTVE",
     version="1.0.0"
 )
+
+# Montar archivos estáticos
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Inicializamos el servicio
 radio_service = RadioShowService()
@@ -19,6 +24,11 @@ async def root():
         "mensaje": "¡Bienvenido a la API de Programas de Radio!",
         "programas_disponibles": list(radio_service.shows_data.keys())
     }
+
+@app.get("/index.html", tags=["Frontend"])
+async def frontend():
+    """Sirve la página principal."""
+    return FileResponse("app/static/index.html")
 
 @app.get("/programas/", response_model=List[RadioShow], tags=["Programas"])
 async def get_shows(programa: Optional[str] = None):
