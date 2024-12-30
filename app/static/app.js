@@ -2,10 +2,12 @@
 let currentPage = 1;
 const itemsPerPage = 10;
 let allEpisodes = [];
+let originalEpisodes = []; // Para mantener una copia de todos los episodios
 
 // Elementos del DOM
 const programaSelect = document.getElementById('programaSelect');
 const yearSelect = document.getElementById('yearSelect');
+const monthSelect = document.getElementById('monthSelect');
 const searchInput = document.getElementById('searchInput');
 const searchButton = document.getElementById('searchButton');
 const episodesList = document.getElementById('episodesList');
@@ -14,16 +16,19 @@ const pagination = document.getElementById('pagination');
 // Inicialización
 async function init() {
     await loadPrograms();
-    await loadYears();
-    await loadEpisodes();
+    await loadAllEpisodes();
+    updateYearSelect();
+    updateMonthSelect();
+    displayEpisodes(1);
     
     // Event listeners
-    programaSelect.addEventListener('change', filterEpisodes);
-    yearSelect.addEventListener('change', filterEpisodes);
-    searchButton.addEventListener('click', filterEpisodes);
+    programaSelect.addEventListener('change', handleProgramChange);
+    yearSelect.addEventListener('change', handleYearChange);
+    monthSelect.addEventListener('change', handleMonthChange);
+    searchButton.addEventListener('click', handleSearch);
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            filterEpisodes();
+            handleSearch();
         }
     });
 }
@@ -46,54 +51,143 @@ async function loadPrograms() {
     }
 }
 
-// Cargar años disponibles
-async function loadYears() {
+// Cargar todos los episodios
+async function loadAllEpisodes() {
     try {
         const response = await fetch('/programas/');
-        const episodes = await response.json();
-        const years = [...new Set(episodes.map(ep => ep.año))].sort((a, b) => b - a);
-        
-        years.forEach(year => {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            yearSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error al cargar años:', error);
-    }
-}
-
-// Cargar episodios
-async function loadEpisodes() {
-    try {
-        const programa = programaSelect.value;
-        const year = yearSelect.value;
-        const searchTerm = searchInput.value;
-        
-        let url = '/programas/';
-        if (programa) {
-            url += `?programa=${encodeURIComponent(programa)}`;
-        }
-        if (year) {
-            url = `/programas/year/${year}`;
-        }
-        if (searchTerm && searchTerm.length >= 3) {
-            url = `/programas/buscar/?q=${encodeURIComponent(searchTerm)}`;
-        }
-        
-        const response = await fetch(url);
-        allEpisodes = await response.json();
-        displayEpisodes(1);
+        originalEpisodes = await response.json();
+        allEpisodes = [...originalEpisodes];
     } catch (error) {
         console.error('Error al cargar episodios:', error);
     }
 }
 
+// Actualizar select de años basado en el programa seleccionado
+function updateYearSelect() {
+    const programa = programaSelect.value;
+    let episodios = allEpisodes;
+    
+    if (programa) {
+        episodios = allEpisodes.filter(ep => ep.programa === programa);
+    }
+    
+    const years = [...new Set(episodios.map(ep => ep.año))].sort((a, b) => b - a);
+    
+    // Guardar el año seleccionado actualmente
+    const currentYear = yearSelect.value;
+    
+    // Limpiar y reconstruir el select de años
+    yearSelect.innerHTML = '<option value="">Todos los años</option>';
+    
+    years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+    });
+    
+    // Si el año seleccionado previamente existe en el nuevo conjunto de años, mantenerlo
+    if (currentYear && years.includes(Number(currentYear))) {
+        yearSelect.value = currentYear;
+    }
+}
+
+// Actualizar select de meses basado en el programa y año seleccionados
+function updateMonthSelect() {
+    const programa = programaSelect.value;
+    const year = yearSelect.value;
+    let episodios = allEpisodes;
+    
+    if (programa) {
+        episodios = episodios.filter(ep => ep.programa === programa);
+    }
+    if (year) {
+        episodios = episodios.filter(ep => ep.año === Number(year));
+    }
+    
+    const months = [...new Set(episodios.map(ep => ep.mes))].sort((a, b) => a - b);
+    const currentMonth = monthSelect.value;
+    
+    // Mantener las opciones existentes pero deshabilitarlas todas
+    Array.from(monthSelect.options).forEach(option => {
+        if (option.value === "") return; // Mantener "Todos los meses" habilitado
+        option.disabled = !months.includes(Number(option.value));
+    });
+    
+    // Si el mes seleccionado previamente no está en los meses disponibles, limpiarlo
+    if (currentMonth && !months.includes(Number(currentMonth))) {
+        monthSelect.value = "";
+    }
+}
+
+// Manejar cambio de programa
+async function handleProgramChange() {
+    currentPage = 1;
+    updateYearSelect();
+    updateMonthSelect();
+    await filterEpisodes();
+}
+
+// Manejar cambio de año
+async function handleYearChange() {
+    currentPage = 1;
+    updateMonthSelect();
+    await filterEpisodes();
+}
+
+// Manejar cambio de mes
+async function handleMonthChange() {
+    currentPage = 1;
+    await filterEpisodes();
+}
+
+// Manejar búsqueda
+async function handleSearch() {
+    const searchTerm = searchInput.value;
+    if (searchTerm && searchTerm.length >= 3) {
+        currentPage = 1;
+        try {
+            const response = await fetch(`/programas/buscar/?q=${encodeURIComponent(searchTerm)}`);
+            allEpisodes = await response.json();
+            displayEpisodes(1);
+        } catch (error) {
+            console.error('Error en la búsqueda:', error);
+        }
+    }
+}
+
 // Filtrar episodios
 async function filterEpisodes() {
-    currentPage = 1;
-    await loadEpisodes();
+    const programa = programaSelect.value;
+    const year = yearSelect.value;
+    const month = monthSelect.value;
+    
+    try {
+        let url = '/programas/fecha';
+        const params = new URLSearchParams();
+        
+        if (year) {
+            url += `/${year}`;
+            if (programa) params.append('programa', programa);
+            if (month) params.append('mes', month);
+            
+            const fullUrl = `${url}?${params.toString()}`;
+            const response = await fetch(fullUrl);
+            allEpisodes = await response.json();
+        } else {
+            // Si no hay año seleccionado, usar el endpoint básico
+            url = '/programas/';
+            if (programa) params.append('programa', programa);
+            
+            const fullUrl = `${url}?${params.toString()}`;
+            const response = await fetch(fullUrl);
+            allEpisodes = await response.json();
+        }
+        
+        displayEpisodes(1);
+    } catch (error) {
+        console.error('Error al filtrar episodios:', error);
+    }
 }
 
 // Mostrar episodios
@@ -103,6 +197,15 @@ function displayEpisodes(page) {
     const paginatedEpisodes = allEpisodes.slice(start, end);
     
     episodesList.innerHTML = '';
+    
+    if (paginatedEpisodes.length === 0) {
+        episodesList.innerHTML = `
+            <div class="list-group-item text-center text-muted">
+                No se encontraron episodios para los filtros seleccionados
+            </div>
+        `;
+        return;
+    }
     
     paginatedEpisodes.forEach(episode => {
         const episodeElement = document.createElement('div');

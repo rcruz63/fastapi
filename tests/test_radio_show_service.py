@@ -33,12 +33,28 @@ def test_get_shows_by_program(radio_service):
     assert len(shows) > 0
     assert all(show.programa == programa for show in shows)
 
-def test_get_shows_by_year(radio_service):
-    """Test que verifica la filtración por año."""
+def test_get_shows_by_date(radio_service):
+    """Test que verifica la filtración por fecha."""
     año = 2010
-    shows = radio_service.get_shows_by_year(año)
+    mes = 10
+    shows = radio_service.get_shows_by_date(año=año, mes=mes)
     assert shows is not None
-    assert all(show.año == año for show in shows)
+    assert all(show.año == año and show.mes == mes for show in shows)
+
+def test_get_shows_by_date_and_program(radio_service):
+    """Test que verifica la filtración por fecha y programa."""
+    año = 2010
+    mes = 10
+    programa = "Música y Significado"
+    shows = radio_service.get_shows_by_date(año=año, mes=mes, programa=programa)
+    assert shows is not None
+    if len(shows) > 0:  # Solo verificar si hay resultados
+        assert all(
+            show.año == año and 
+            show.mes == mes and 
+            show.programa == programa 
+            for show in shows
+        )
 
 def test_search_by_title(radio_service):
     """Test que verifica la búsqueda por título."""
@@ -52,7 +68,12 @@ def test_invalid_program_returns_empty_list(radio_service):
     shows = radio_service.get_all_shows(programa="Programa Inexistente")
     assert shows == []
 
-def test_invalid_year_returns_empty_list(radio_service):
-    """Test que verifica que un año inválido devuelve lista vacía."""
-    shows = radio_service.get_shows_by_year(1900)
+def test_invalid_date_returns_empty_list(radio_service):
+    """Test que verifica que una fecha inválida devuelve lista vacía."""
+    shows = radio_service.get_shows_by_date(año=1900, mes=1)
+    assert shows == []
+
+def test_invalid_program_and_date_returns_empty_list(radio_service):
+    """Test que verifica que un programa y fecha inválidos devuelven lista vacía."""
+    shows = radio_service.get_shows_by_date(año=2010, mes=1, programa="Programa Inexistente")
     assert shows == [] 
